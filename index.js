@@ -2,10 +2,12 @@ exports.getServerLocation = function (environment) {
     this.environment = environment;
     if (environment == 'sit') {
         return 'http://api-sit.doku.com/';
-    } else if (environment == 'sandbox') {
+    } else if (environment === 'sandbox') {
         return 'https://sandbox.doku.com/';
     } else if (environment == 'production') {
         return 'https://api.doku.com/';
+    } else {
+        return environment;
     }
 }
 
