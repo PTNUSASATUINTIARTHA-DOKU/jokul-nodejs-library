@@ -14,7 +14,7 @@ Official NodeJs Library for Jokul API. Visit [https://jokul.doku.com](https://jo
 
 ## Requirements
 
-Node v10 or above
+Node v10 or above < br>
 Npm v6 or above
 
 ## Installation
