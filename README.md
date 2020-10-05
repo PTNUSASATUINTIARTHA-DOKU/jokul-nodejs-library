@@ -20,7 +20,7 @@ Npm v6 or above
 ## Installation
 
 ### Npm
-Run command `npm install jokul-nodejs-library --save` && `npm install sync-request --save` && `npm install crypto-js --save`
+Run command `npm install jokul-nodejs-library --save && npm install sync-request --save && npm install crypto-js --save`
 
 ## Usage
 
