@@ -100,7 +100,7 @@ exports.NotifyResponseDto = {
 
 exports.generateMandiriVa = async function generateMandiriVa(paymentCodeRequest) {
     setupConfiguration.api_target = '/mandiri-virtual-account/v1/payment-code';
-    return post(setupConfiguration, paymentCodeRequest);
+    return await post(setupConfiguration, paymentCodeRequest);
 }
 
 exports.generateDOKUVa = async function generateDOKUVa(setupConfiguration, paymentCodeRequest) {
