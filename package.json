@@ -9,8 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^0.21.0",
     "crypto-js": "^4.0.0",
-    "request-promise": "^4.2.6",
-    "then-request": "^6.0.2"
+    "request-promise": "^4.2.6"
   }
 }

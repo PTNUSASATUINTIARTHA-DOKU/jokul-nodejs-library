@@ -98,34 +98,39 @@ exports.NotifyResponseDto = {
     }
 }
 
-exports.generateMandiriVa = function generateMandiriVa(paymentCodeRequest) {
+exports.generateMandiriVa = async function generateMandiriVa(paymentCodeRequest) {
     setupConfiguration.api_target = '/mandiri-virtual-account/v1/payment-code';
     return post(setupConfiguration, paymentCodeRequest);
 }
 
-exports.generateDOKUVa = function generateDOKUVa(setupConfiguration, paymentCodeRequest) {
+exports.generateDOKUVa = async function generateDOKUVa(setupConfiguration, paymentCodeRequest) {
     setupConfiguration.api_target = '/doku-virtual-account/v2/payment-code';
-    return post(setupConfiguration, paymentCodeRequest);
+    return await post(setupConfiguration, paymentCodeRequest);
 }
 
 function post(setupConfiguration, paymentCodeRequest) {
-    const request = require('then-request');
+    const axios = require('axios')
 
     setupConfiguration.request_id = Math.floor(Math.random() * Math.floor(100000));
     setupConfiguration.request_timestamp = new Date().toISOString().slice(0, 19) + "Z";
 
-    let res = request('POST', setupConfiguration.serverLocation + setupConfiguration.api_target, {
+    let axiosConfig = {
         headers: {
             'Signature': "HMACSHA256=" + createSignature(setupConfiguration, paymentCodeRequest),
             'Request-Id': setupConfiguration.request_id,
             'Client-Id': setupConfiguration.client_id,
             'Request-Timestamp': setupConfiguration.request_timestamp,
-            'Request-Target': setupConfiguration.api_target,
-        },
-        json: paymentCodeRequest,
-    });
+            'Request-Target': setupConfiguration.api_target
+        }
+    };
 
-    return JSON.parse(res.getBody('utf8'));
+    return axios.post(setupConfiguration.serverLocation + setupConfiguration.api_target, paymentCodeRequest, axiosConfig)
+        .then(res => {
+            return res.data;
+        })
+        .catch(error => {
+            throw error;
+        })
 }
 
 function createSignature(setupConfiguration, paymentCodeRequest) {
