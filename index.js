@@ -1,11 +1,11 @@
 exports.getServerLocation = function (environment) {
     this.environment = environment;
     if (environment == 'sit') {
-        return 'http://api-sit.doku.com/';
-    } else if (environment === 'sandbox') {
-        return 'https://sandbox.doku.com/';
+        return 'http://api-sit.doku.com';
+    } else if (environment == 'sandbox') {
+        return 'https://sandbox.doku.com';
     } else if (environment == 'production') {
-        return 'https://api.doku.com/';
+        return 'https://api.doku.com';
     } else {
         return environment;
     }
@@ -36,12 +36,13 @@ exports.SetupConfiguration = {
     shared_key: "",
     environment: "",
     serverLocation: "",
+    channel: "",
+    request_id: "",
+    request_timestamp: "",
+    api_target: ""
 };
 
 exports.PaymentCodeRequestDto = {
-    client: {
-        id: ""
-    },
     order: {
         invoice_number: "",
         amount: 0
@@ -56,55 +57,97 @@ exports.PaymentCodeRequestDto = {
     customer: {
         name: "",
         email: ""
+    }
+}
+
+exports.NotifyRequestDto = {
+    client: {
+        id: ""
+    },
+    order: {
+        invoice_number: "",
+        amount: 0
+    },
+    virtual_account_info: {
+        virtual_account_number: ""
+    },
+    virtual_account_payment: {
+        date: "",
+        systrace_number: "",
+        reference_number: "",
+        channel_code: ""
     },
     security: {
         check_sum: ""
     }
 }
 
-exports.NotifyRequestDto = {
-    client: {
-        id:""
-    },
-    order: {
-        invoice_number:"",
-        amount:0
-    },
-    virtual_account_info: {
-        virtual_account_number:""
-    },
-    virtual_account_payment: {
-        date:"",
-        systrace_number:"",
-        reference_number:"",
-        channel_code:""
-    },
-    security:{
-        check_sum:""
-    }
-}
-
 exports.NotifyResponseDto = {
     client: {
-        id:""
+        id: ""
     },
     order: {
-        invoice_number:"",
-        amount:0
+        invoice_number: "",
+        amount: 0
     },
     virtual_account_info: {
-        virtual_account_number:""
+        virtual_account_number: ""
     },
-    security:{
-        check_sum:""
+    security: {
+        check_sum: ""
     }
 }
 
-exports.generateMandiriVa = function generateMandiriVa(serverLocation, paymentCodeRequest) {
-    const request = require('sync-request');
-    let res = request('POST',  serverLocation + 'mandiri-virtual-account/v1/payment-code', {
+exports.generateMandiriVa = function generateMandiriVa(paymentCodeRequest) {
+    setupConfiguration.api_target = '/mandiri-virtual-account/v1/payment-code';
+    return post(setupConfiguration, paymentCodeRequest);
+}
+
+exports.generateDOKUVa = function generateDOKUVa(setupConfiguration, paymentCodeRequest) {
+    setupConfiguration.api_target = '/doku-virtual-account/v2/payment-code';
+    return post(setupConfiguration, paymentCodeRequest);
+}
+
+function post(setupConfiguration, paymentCodeRequest) {
+    const request = require('then-request');
+
+    setupConfiguration.request_id = Math.floor(Math.random() * Math.floor(100000));
+    setupConfiguration.request_timestamp = new Date().toISOString().slice(0, 19) + "Z";
+
+    let res = request('POST', setupConfiguration.serverLocation + setupConfiguration.api_target, {
+        headers: {
+            'Signature': "HMACSHA256=" + createSignature(setupConfiguration, paymentCodeRequest),
+            'Request-Id': setupConfiguration.request_id,
+            'Client-Id': setupConfiguration.client_id,
+            'Request-Timestamp': setupConfiguration.request_timestamp,
+            'Request-Target': setupConfiguration.api_target,
+        },
         json: paymentCodeRequest,
     });
 
     return JSON.parse(res.getBody('utf8'));
+}
+
+function createSignature(setupConfiguration, paymentCodeRequest) {
+    const CryptoJS = require("crypto-js");
+    var channel = setupConfiguration.channel;
+
+    if (channel == 'mandiri') {
+        apiTarget = '/mandiri-virtual-account/v2/payment-code';
+    } else if (channel == 'doku') {
+        apiTarget = '/doku-virtual-account/v2/payment-code';
+    } else if (channel == 'mandiri-syariah') {
+        apiTarget = '/bsm-virtual-account/v2/payment-code';
+    }
+
+    var bodySha256 = CryptoJS.enc.Base64.stringify(CryptoJS.SHA256(JSON.stringify(paymentCodeRequest)));
+    var signatureComponents =
+        "Client-Id:" + setupConfiguration.client_id + "\n"
+        + "Request-Id:" + setupConfiguration.request_id + "\n"
+        + "Request-Timestamp:" + setupConfiguration.request_timestamp + "\n"
+        + "Request-Target:" + setupConfiguration.api_target + "\n"
+        + "Digest:" + bodySha256;
+    var signature = CryptoJS.enc.Base64.stringify(CryptoJS.HmacSHA256(signatureComponents, setupConfiguration.shared_key));
+
+    return signature;
 }

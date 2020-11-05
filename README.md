@@ -52,7 +52,6 @@ Prepare your request data:
     const dokuLib = require('jokul-nodejs-library');
 
     let paymentCodeRequest = dokuLib.PaymentCodeRequestDto;
-        paymentCodeRequest.client.id =  setupConfiguration.client_id
         paymentCodeRequest.customer.name = 'CUSTOMER_NAME';
         paymentCodeRequest.customer.email ='EMAIL';
         paymentCodeRequest.order.invoice_number = 'INVOICE NUMBER';
@@ -62,7 +61,6 @@ Prepare your request data:
         paymentCodeRequest.virtual_account_info.info3 = 'INFO3';
         paymentCodeRequest.virtual_account_info.reusable_status = false;
         paymentCodeRequest.virtual_account_info.expired_time = 60;
-        paymentCodeRequest.security.check_sum =dokuLib.getCheckSum(setupConfiguration, paymentCodeRequest);
 ```
 
 #### Mandiri VA
@@ -72,7 +70,18 @@ After preparing your request data, you can now generate the payment code / virtu
 ```javascript
 const dokuLib = require('jokul-nodejs-library');
  
-dokuLib.generateMandiriVa(setupConfiguration.serverLocation, paymentCodeRequest);
+dokuLib.generateMandiriVa(setupConfiguration, paymentCodeRequest);
+dokuLib.generateDOKUVa(setupConfiguration, paymentCodeRequest);
+```
+
+#### DOKU VA
+
+After preparing your request data, you can now generate the payment code / virtual account number:
+
+```javascript
+const dokuLib = require('jokul-nodejs-library');
+ 
+dokuLib.generateDOKUVa(setupConfiguration, paymentCodeRequest);
 ```
 
 #### Example Code - Virtual Account
@@ -82,15 +91,17 @@ Putting them all together. Here is the example code from setup your configuratio
 ```javascript
 const dokuLib = require('jokul-nodejs-library');
 
+var channel = req.body.channel;
+
 let setupConfiguration = dokuLib.SetupConfiguration;
     setupConfiguration.environment = 'sandbox'
     setupConfiguration.client_id = 'CLIENTID';
     setupConfiguration.merchant_name = 'MERCHANT_NAME';
     setupConfiguration.shared_key = 'SHARED_KEY';
     setupConfiguration.serverLocation = dokuLib.getServerLocation(setupConfiguration.environment);
+    setupConfiguration.channel = channel;
 
  let paymentCodeRequest = dokuLib.PaymentCodeRequestDto;
-     paymentCodeRequest.client.id =  setupConfiguration.client_id 
      paymentCodeRequest.customer.name = 'CUSTOMER_NAME';
      paymentCodeRequest.customer.email ='EMAIL';
      paymentCodeRequest.order.invoice_number = 'INVOICE NUMBER';
@@ -100,9 +111,14 @@ let setupConfiguration = dokuLib.SetupConfiguration;
      paymentCodeRequest.virtual_account_info.info3 = 'INFO3';
      paymentCodeRequest.virtual_account_info.reusable_status = false;
      paymentCodeRequest.virtual_account_info.expired_time = 60;
-     paymentCodeRequest.security.check_sum = dokuLib.getCheckSum(setupConfiguration, paymentCodeRequest);
 
- dokuLib.generatePaycode(setupConfiguration.serverLocation, paymentCodeRequest);
+  if (channel == 'mandiri') {
+        dokuLib.generateMandiriVa(setupConfiguration,paymentCodeRequest);
+    } else if (channel == 'doku') {
+        dokuLib.generateDOKUVa(setupConfiguration, paymentCodeRequest);
+    } else if (channel == 'mandiri-syariah') {
+        //do something
+    }
 
 ```
 ### Notification
