@@ -71,7 +71,6 @@ After preparing your request data, you can now generate the payment code / virtu
 const dokuLib = require('jokul-nodejs-library');
  
 dokuLib.generateMandiriVa(setupConfiguration, paymentCodeRequest);
-dokuLib.generateDOKUVa(setupConfiguration, paymentCodeRequest);
 ```
 
 #### DOKU VA
@@ -93,32 +92,51 @@ const dokuLib = require('jokul-nodejs-library');
 
 var channel = req.body.channel;
 
-let setupConfiguration = dokuLib.SetupConfiguration;
-    setupConfiguration.environment = 'sandbox'
-    setupConfiguration.client_id = 'CLIENTID';
-    setupConfiguration.merchant_name = 'MERCHANT_NAME';
-    setupConfiguration.shared_key = 'SHARED_KEY';
+    let setupConfiguration = dokuLib.SetupConfiguration;
+    setupConfiguration.environment = req.body.environment;
+    setupConfiguration.client_id = req.body.clientId;
+    setupConfiguration.merchant_name = req.body.merchantName;
+    setupConfiguration.shared_key = req.body.sharedKey;
     setupConfiguration.serverLocation = dokuLib.getServerLocation(setupConfiguration.environment);
     setupConfiguration.channel = channel;
 
- let paymentCodeRequest = dokuLib.PaymentCodeRequestDto;
-     paymentCodeRequest.customer.name = 'CUSTOMER_NAME';
-     paymentCodeRequest.customer.email ='EMAIL';
-     paymentCodeRequest.order.invoice_number = 'INVOICE NUMBER';
-     paymentCodeRequest.order.amount = 10000;
-     paymentCodeRequest.virtual_account_info.info1 = 'INFO1';
-     paymentCodeRequest.virtual_account_info.info2 = 'INFO2';
-     paymentCodeRequest.virtual_account_info.info3 = 'INFO3';
-     paymentCodeRequest.virtual_account_info.reusable_status = false;
-     paymentCodeRequest.virtual_account_info.expired_time = 60;
+    let paymentCodeRequest = dokuLib.PaymentCodeRequestDto;
+    paymentCodeRequest.customer.name = req.body.customerName;
+    paymentCodeRequest.customer.email = req.body.email;
+    paymentCodeRequest.order.invoice_number = randomInvoice(30);
+    paymentCodeRequest.order.amount = req.body.amount;
+    paymentCodeRequest.virtual_account_info.info1 = req.body.info1;
+    paymentCodeRequest.virtual_account_info.info2 = req.body.info2;
+    paymentCodeRequest.virtual_account_info.info3 = req.body.info3;
+    paymentCodeRequest.virtual_account_info.reusable_status = req.body.reusableStatus;
+    paymentCodeRequest.virtual_account_info.expired_time = req.body.expiredTime != null ? req.body.expiredTime : '';
 
-  if (channel == 'mandiri') {
-        dokuLib.generateMandiriVa(setupConfiguration,paymentCodeRequest);
-    } else if (channel == 'doku') {
-        dokuLib.generateDOKUVa(setupConfiguration, paymentCodeRequest);
-    } else if (channel == 'mandiri-syariah') {
-        //do something
+    (async function () {
+        let response = await post(setupConfiguration, paymentCodeRequest, channel);
+        res.send(response);
+    })();
+
+});
+
+async function post(setupConfiguration, paymentCodeRequest, channel) {
+    try {
+        let response;
+
+        if (channel == 'mandiri') {
+            response = await dokuLib.generateMandiriVa(setupConfiguration, paymentCodeRequest);
+        } else if (channel == 'doku') {
+            response = await dokuLib.generateDOKUVa(setupConfiguration, paymentCodeRequest);
+        } else if (channel == 'mandiri-syariah') {
+            //do something
+        }
+
+        return response;
+    } catch (error) {
+        console.log(error);
+        return null;
     }
+
+}
 
 ```
 ### Notification
