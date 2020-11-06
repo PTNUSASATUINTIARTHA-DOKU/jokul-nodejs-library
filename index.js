@@ -60,46 +60,8 @@ exports.PaymentCodeRequestDto = {
     }
 }
 
-exports.NotifyRequestDto = {
-    client: {
-        id: ""
-    },
-    order: {
-        invoice_number: "",
-        amount: 0
-    },
-    virtual_account_info: {
-        virtual_account_number: ""
-    },
-    virtual_account_payment: {
-        date: "",
-        systrace_number: "",
-        reference_number: "",
-        channel_code: ""
-    },
-    security: {
-        check_sum: ""
-    }
-}
-
-exports.NotifyResponseDto = {
-    client: {
-        id: ""
-    },
-    order: {
-        invoice_number: "",
-        amount: 0
-    },
-    virtual_account_info: {
-        virtual_account_number: ""
-    },
-    security: {
-        check_sum: ""
-    }
-}
-
-exports.generateMandiriVa = async function generateMandiriVa(paymentCodeRequest) {
-    setupConfiguration.api_target = '/mandiri-virtual-account/v1/payment-code';
+exports.generateMandiriVa = async function generateMandiriVa(setupConfiguration, paymentCodeRequest) {
+    setupConfiguration.api_target = '/mandiri-virtual-account/v2/payment-code';
     return await post(setupConfiguration, paymentCodeRequest);
 }
 
@@ -114,9 +76,14 @@ function post(setupConfiguration, paymentCodeRequest) {
     setupConfiguration.request_id = Math.floor(Math.random() * Math.floor(100000));
     setupConfiguration.request_timestamp = new Date().toISOString().slice(0, 19) + "Z";
 
+    var hmac = "HMACSHA256=";
+    if (setupConfiguration.api_target.includes('mandiri')) {
+        hmac = "HMACHSHA256=";
+    }
+
     let axiosConfig = {
         headers: {
-            'Signature': "HMACSHA256=" + createSignature(setupConfiguration, paymentCodeRequest),
+            'Signature': hmac + createSignature(setupConfiguration, paymentCodeRequest),
             'Request-Id': setupConfiguration.request_id,
             'Client-Id': setupConfiguration.client_id,
             'Request-Timestamp': setupConfiguration.request_timestamp,
@@ -133,7 +100,39 @@ function post(setupConfiguration, paymentCodeRequest) {
         })
 }
 
-function createSignature(setupConfiguration, paymentCodeRequest) {
+exports.getNotification = function getNotification(request) {
+    let response = {
+        order: {
+            invoice_number: request['order']['invoice_number'],
+            amount: request['order']['amount']
+        },
+        virtual_account_info: {
+            virtual_account_number: request['virtual_account_info']['virtual_account_number']
+        }
+    }
+    return response;
+}
+
+exports.getSignature = function getSignature(header, notifyRequest, key) {
+    const CryptoJS = require("crypto-js");
+    return new Promise((resolve, reject) => {
+        try {
+            var bodySha256 = CryptoJS.enc.Base64.stringify(CryptoJS.SHA256(notifyRequest));
+            var signatureComponents =
+                "Client-Id:" + header['client-id'] + "\n"
+                + "Request-Id:" + header['request-id'] + "\n"
+                + "Request-Timestamp:" + header['request-timestamp'] + "\n"
+                + "Request-Target:" + header['request-target'] + "\n"
+                + "Digest:" + bodySha256;
+            var signature = CryptoJS.enc.Base64.stringify(CryptoJS.HmacSHA256(signatureComponents, key));
+            return resolve('HMACSHA256=' + signature);
+        } catch (error) {
+            return reject(error);
+        }
+    });
+}
+
+function createSignature(setupConfiguration, incomingRequest) {
     const CryptoJS = require("crypto-js");
     var channel = setupConfiguration.channel;
 
@@ -143,9 +142,11 @@ function createSignature(setupConfiguration, paymentCodeRequest) {
         apiTarget = '/doku-virtual-account/v2/payment-code';
     } else if (channel == 'mandiri-syariah') {
         apiTarget = '/bsm-virtual-account/v2/payment-code';
+    } else {
+        apiTarget = ''
     }
 
-    var bodySha256 = CryptoJS.enc.Base64.stringify(CryptoJS.SHA256(JSON.stringify(paymentCodeRequest)));
+    var bodySha256 = CryptoJS.enc.Base64.stringify(CryptoJS.SHA256(JSON.stringify(incomingRequest)));
     var signatureComponents =
         "Client-Id:" + setupConfiguration.client_id + "\n"
         + "Request-Id:" + setupConfiguration.request_id + "\n"
