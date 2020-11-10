@@ -57,6 +57,8 @@ exports.PaymentCodeRequestDto = {
     customer: {
         name: "",
         email: ""
+    },
+    additional_info: {
     }
 }
 
@@ -76,9 +78,21 @@ function post(setupConfiguration, paymentCodeRequest) {
     setupConfiguration.request_id = Math.floor(Math.random() * Math.floor(100000));
     setupConfiguration.request_timestamp = new Date().toISOString().slice(0, 19) + "Z";
 
-    var hmac = "HMACSHA256=";
+    //delete in v2
+    var hmac;
     if (setupConfiguration.api_target.includes('mandiri')) {
         hmac = "HMACHSHA256=";
+        delete paymentCodeRequest['additional_info'];
+    } else {
+        hmac = "HMACSHA256=";
+        var integrationInfo = {
+            integration: {
+                name: "nodejs-library",
+                version: "2.0.0"
+            }
+        };
+
+        Object.assign(paymentCodeRequest.additional_info, integrationInfo);
     }
 
     let axiosConfig = {
